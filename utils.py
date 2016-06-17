@@ -126,9 +126,9 @@ def load_task_defs():
 		this loads them into the program '''
 	raise NotImplementedError
 
-datumlog = make_logger('datum_creation_log', 
-	frmt='%(name)s:%(message)s', 
-	fpath='datum_creation_log')
-primitivelog = make_logger('primitive_creation_log',
-	frmt='%(name)s:%(message)s',
-	fpath='primitive_creation_log')
+# datumlog = make_logger('datum_creation_log', 
+	# frmt='%(name)s:%(message)s', 
+	# fpath='datum_creation_log')
+# primitivelog = make_logger('primitive_creation_log',
+	# frmt='%(name)s:%(message)s',
+	# fpath='primitive_creation_log')

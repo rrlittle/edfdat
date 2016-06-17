@@ -122,7 +122,6 @@ from utils import make_logger, logging, blocksize, roundup, wordsize
 from dat_primitives import dat_int, dat_float, dat_char, dat_list, dat_short, dat_str, \
 dat_vec, dat_uet, dat_strchunk, dat_type
 from __init__ import rglog, datumlistlog, datumlog
-import IPython
 import ipdb
 from random import random
 
@@ -363,8 +362,9 @@ class datumlist(object):
             loc = 0
             cur_iterable = self # start iterating at top level of self
             # go through all the definitions they provide. should be path through self
-            # ipdb.set_trace()
+            ipdb.set_trace()
             for dat_def in datums: 
+                datumlistlog.critical('iterating and trying to find %s'%dat_def)
                 assert 'name' in dat_def, 'datum definition %s must have name key'%dat_def
                 # it should either be datlist or repGroup datum. implementing datlist
                 if isinstance(cur_iterable, datumlist): 
@@ -384,21 +384,25 @@ class datumlist(object):
                                 and issubclass(cur_iterable.typ, repGroup)): # then it must be a repGroup
                     # repgroups require index to specify what index to go through
                     assert 'index' in dat_def, '%s leads to a repGroup needs index'%datums
-                    datumlistlog.critical('looking for %s in repGroup'%dat_def['name'])
+                    datumlistlog.critical('looking for %s(%s) in repGroup'%(dat_def['name'], dat_def['index']))
                     #iterate through the group
-                    for i,grp in enumerate(cur_iterable.value): # iterate through groups
-                        # iterate through the datums in group
-                        for d in grp:
-                            datumlistlog.critical('%s == %s(%s) @ %s? %s'%(dat_def['name'],
-                                d.name,i, loc, 
-                                dat_def['name'] == d.name and dat_def['index'] == i))
-                            # check if it's got the right name and grp index
-                            if dat_def['name'] == d.name and dat_def['index'] == i:
-                                # if so set the iteration of the next loop to be this
-                                # should be repeatGroup or they screwed something up
-                                cur_iterable = d
-                                break # go to next dat_def
-                            loc += d.size
+                    try:
+                        for i,grp in enumerate(cur_iterable.value): # iterate through groups
+                            # iterate through the datums in group
+                            datumlistlog.critical('looking in group %s'%i)
+                            for d in grp:
+                                datumlistlog.critical('%s == %s(%s) @ %s? %s'%(dat_def['name'],
+                                    d.name,i, loc, 
+                                    dat_def['name'] == d.name and dat_def['index'] == i))
+                                # check if it's got the right name and grp index
+                                if dat_def['name'] == d.name and dat_def['index'] == i:
+                                    # if so set the iteration of the next loop to be this
+                                    # should be repeatGroup or they screwed something up
+                                    cur_iterable = d
+                                    raise StopIteration # go to next dat_def
+                                loc += d.size
+                    except StopIteration, e: pass
+            
             # return values datum or None and pointer value
             if isinstance(cur_iterable, datum) and cur_iterable.name == datums[-1]['name']:
                 datumlistlog.critical('Found %s at pos %s'%(cur_iterable, loc))

@@ -1,12 +1,12 @@
 from __init__ import dsetlog
 from datumobjects import datumlist
-import IPython
 import ipdb
 
+
 class dataset(datumlist):
-    ''' 
+    '''
         A dataset is a special datumlist
-        where the first set of datums are always the same. 
+        where the first set of datums are always the same.
         SCHNAM TYPE STRING LENGTH 8
         RECLNT                        /* in blocks */
         ANID TYPE STRING LENGTH 12
@@ -15,7 +15,7 @@ class dataset(datumlist):
         TIME                          /* in 10ths of seconds since midnight */
         EXTYP TYPE STRING LENGTH 4
 
-        after that it's just a normal datumlist an you're free to 
+        after that it's just a normal datumlist an you're free to
         set up whatever schema you'd like.
         '''
     SCHNAM_LEN = 4  # str size in words
@@ -23,6 +23,7 @@ class dataset(datumlist):
     DSID_LEN = 6    # str size in words
     DATE_LEN = 4    # str size in words
     EXP_LEN = 2     # str size in words
+    
     def __init__(self,SCHNAM=None,
         ANID=None,
         DSID=None,
@@ -114,31 +115,33 @@ class dataset(datumlist):
 
 class sho18(dataset):
     SCHNAM = 'scho18'
-    scapend_words = 4 # each word is 2 character
+    scapend_words = 4  # each word is 2 character
     comment_words = 30
     var_name_words = 4
-    def populate(self, 
-        SP1CH   =None,  # int       Spikes UET channel number
-        STRTCH  =None,  # int       Start sync. UET channel number
-        TERMCH  =None,  # int       Terminate UET channel number
-        INWCH   =None,  # int       Enter Window UET channel number
-        REWCH   =None,  # int       Reward start UET channel number
-        ENDCH   =None,  # int       End Trial UET channel number
-        TBASE   =None,  # float     UET times base in seconds
-        STFORM  =None,  # int       Status table format code
-        RNSEED  =None,  # int       Seed used for random number generator
-        TGRACL1 =None,  # float     Grace time for LED-1 ? (secs)
-        TSPOTL1 =None,  # float     Time to spot LED-1 ? (secs)
-        TGRACL2 =None,  # float     Grace time for LED-2 ? (secs)
-        TSPOTL2 =None,  # float     Time to spot LED-2 ? (secs)
-        SPONTIM =None,  # float     Spontaneous time ? (secs)
-        ISDREW  =None,  # float     Inter-seq delay after reward (secs)
+
+    def populate(
+        self,
+        SP1CH=None,  # int       Spikes UET channel number
+        STRTCH=None,  # int       Start sync. UET channel number
+        TERMCH=None,  # int       Terminate UET channel number
+        INWCH=None,  # int       Enter Window UET channel number
+        REWCH=None,  # int       Reward start UET channel number
+        ENDCH=None,  # int       End Trial UET channel number
+        TBASE=None,  # float     UET times base in seconds
+        STFORM=None,  # int       Status table format code
+        RNSEED=None,  # int       Seed used for random number generator
+        TGRACL1=None,  # float     Grace time for LED-1 ? (secs)
+        TSPOTL1=None,  # float     Time to spot LED-1 ? (secs)
+        TGRACL2=None,  # float     Grace time for LED-2 ? (secs)
+        TSPOTL2=None,  # float     Time to spot LED-2 ? (secs)
+        SPONTIM=None,  # float     Spontaneous time ? (secs)
+        ISDREW=None,  # float     Inter-seq delay after reward (secs)
         ISDNOREW=None,  # float     Inter-seq delay after no-reward (secs)
-        ATTLOW  =None,  # float     Attenuator low value (dB)
-        ATTHIGH =None,  # float     Attenuator High value (dB)
-        ATTINC  =None,  # float     Attn. Step size (dB)
-        SCAPEND =None,  # STR  8    Schema name for appended data
-        FXPAR   =None,  # rg        fill in beforehand. checked here.
+        ATTLOW=None,  # float     Attenuator low value (dB)
+        ATTHIGH=None,  # float     Attenuator High value (dB)
+        ATTINC=None,  # float     Attn. Step size (dB)
+        SCAPEND=None,  # STR  8    Schema name for appended data
+        FXPAR=None,  # rg        fill in beforehand. checked here.
         #    FXPARV RG OCCURS NFXPAR TIMES
         #        FXVNAM TYPE STRING 8    Fixed Variable name
         #        FXVTYP TYPE I*2         Fixed Var type 1=int,2=fp,3=char
@@ -1118,7 +1121,7 @@ class unittests():
         stuff.add_group()
         stuff[0].add('foo', 'int', 1)
         dsetlog.warn('len of stuff: %s'%lenofstuff.size)
-        ipdb.set_trace()
+        # ipdb.set_trace()
         stuff[0].add('foo1', 'int', 2  )
         dsetlog.warn('len of stuff: %s'%lenofstuff.size)
         
