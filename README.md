@@ -267,6 +267,9 @@ the only functions one would need to care about. would be the \_\_init\_\_ funct
 the populate function takes a whole bunch of values required to fill out a sch018 schema. the arguments should be formatted according to that functions documentation. 
 
 
+the class datfile is composed of a directory and a list of datasets.
+with the ability to write them to a file. 
+
 
 -----------
 

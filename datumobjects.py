@@ -354,7 +354,7 @@ class datumlist(object):
                 '''
         #if they pass in a single datum_name, set it to the correct format
         try:
-            datumlistlog.critical('######## getting %s'%datums)
+            datumlistlog.info('######## getting %s'%datums)
             if isinstance(datums, str): datums = [{'name':datums}]
             assert len(datums)>0, ('must pass in a list of datum def dicts '
                 '{name:_, index:_} not %s'%datums)
@@ -362,20 +362,20 @@ class datumlist(object):
             loc = 0
             cur_iterable = self # start iterating at top level of self
             # go through all the definitions they provide. should be path through self
-            ipdb.set_trace()
+            # ipdb.set_trace()
             for dat_def in datums: 
-                datumlistlog.critical('iterating and trying to find %s'%dat_def)
+                datumlistlog.info('iterating and trying to find %s'%dat_def)
                 assert 'name' in dat_def, 'datum definition %s must have name key'%dat_def
                 # it should either be datlist or repGroup datum. implementing datlist
                 if isinstance(cur_iterable, datumlist): 
-                    datumlistlog.critical('looking for %s in datumlist'%dat_def['name'])
+                    datumlistlog.info('looking for %s in datumlist'%dat_def['name'])
                     # go through datlist
                     for d in cur_iterable: 
-                        datumlistlog.critical('%s == %s? %s @ %s'%(dat_def['name'], 
+                        datumlistlog.info('%s == %s? %s @ %s'%(dat_def['name'], 
                             d.name, loc, d.name == dat_def['name']))
                         # did we find the right one? based on name alone, no index needed
                         if d.name == dat_def['name']: 
-                            datumlistlog.critical('Found %s'%d)
+                            datumlistlog.info('Found %s'%d)
                             cur_iterable = d
                             break # go to next dat_def
                         loc += d.size # else increment the pointer position
@@ -384,14 +384,14 @@ class datumlist(object):
                                 and issubclass(cur_iterable.typ, repGroup)): # then it must be a repGroup
                     # repgroups require index to specify what index to go through
                     assert 'index' in dat_def, '%s leads to a repGroup needs index'%datums
-                    datumlistlog.critical('looking for %s(%s) in repGroup'%(dat_def['name'], dat_def['index']))
+                    datumlistlog.info('looking for %s(%s) in repGroup'%(dat_def['name'], dat_def['index']))
                     #iterate through the group
                     try:
                         for i,grp in enumerate(cur_iterable.value): # iterate through groups
                             # iterate through the datums in group
-                            datumlistlog.critical('looking in group %s'%i)
+                            datumlistlog.info('looking in group %s'%i)
                             for d in grp:
-                                datumlistlog.critical('%s == %s(%s) @ %s? %s'%(dat_def['name'],
+                                datumlistlog.info('%s == %s(%s) @ %s? %s'%(dat_def['name'],
                                     d.name,i, loc, 
                                     dat_def['name'] == d.name and dat_def['index'] == i))
                                 # check if it's got the right name and grp index
@@ -405,16 +405,16 @@ class datumlist(object):
             
             # return values datum or None and pointer value
             if isinstance(cur_iterable, datum) and cur_iterable.name == datums[-1]['name']:
-                datumlistlog.critical('Found %s at pos %s'%(cur_iterable, loc))
+                datumlistlog.info('Found %s at pos %s'%(cur_iterable, loc))
                 if ret_datum: return cur_iterable, loc
                 else: return loc
             else: 
-                datumlistlog.critical(('looked thorugh everything unable to find %s. '
+                datumlistlog.info(('looked thorugh everything unable to find %s. '
                     'size of self is %s')%(datums[-1]['name'], loc))
                 if ret_datum: return None, loc  
                 else: return -1 
         except Exception,e: 
-            datumlistlog.critical('\n#########\n#####\n##### ERROR(%s): %s'%(type(e),e))
+            datumlistlog.info('\n#########\n#####\n##### ERROR(%s): %s'%(type(e),e))
 
 class group(datumlist):
     ''' these are the things that get held in a repeat group
