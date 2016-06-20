@@ -248,7 +248,7 @@ the types we know about are:
 
 --------------
 
-## datfile
+## datfile.py
 
 this file contains the classes required to make datfiles. including 
 
