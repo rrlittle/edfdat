@@ -33,7 +33,7 @@ from utils import frombin # (binstr, bincode)  turns binary into val according t
 from utils import bin2hex # (binstr) turns binary into hex str preceded by \x
 from utils import all_elems_same_type # (list) T iff elems are type, Typeerr if empty/nill
 from cStringIO import StringIO as sio # string-like files
-from __init__ import primlog
+from loggers import primlog
 import ipdb
 
 
@@ -82,53 +82,84 @@ class dat_type(object):
 			as they see fit. provide in case the value encodes deeper information
 			'''
 		return binstr
-	def __repr__(self): return str(self.value)
-	def __str__(self): return str(self.value)
-	def __int__(self): return int(self.value)
-	def __mul__(self,other): return self.value * other #  self * 2
-	def __rmul__(self,other): return self.__mul__(other) # 2 * self
-	def __eq__(self, v2): return self.value == v2 # self == 2
-	def __ne__(self, v2): return not self.__eq__(v2) # self != 2
-	def __index__(self): return self.value # array[self]
-	def __hash__(self): return hash(self.value) # used for comparing keys in dicts
-	def __add__(self, other): return other + self.value 
+	def __repr__(self):
+		'''returns string representation of this object'''
+		return str(self.value)
+	def __str__(self): 
+		''' returns string representation of this object'''
+		return str(self.value)
+	def __int__(self): 
+		''' return int representation of this object'''
+		return int(self.value)
+	def __mul__(self,other): 
+		''' multiply self.value * other'''
+		return self.value * other #  self * 2
+	def __rmul__(self,other): 
+		''' multiply other * self.value'''
+		return self.__mul__(other) # 2 * self
+	def __eq__(self, v2): 
+		''' True IFF self == v2'''
+		return self.value == v2
+	def __ne__(self, v2): 
+		''' True iff self != v2'''
+		return not self.__eq__(v2) # self != 2
+	def __index__(self): 
+		''' allows for using this object as an index in an array 
+			e.g. arr[self]'''
+		return self.value # array[self]
+	def __hash__(self): 
+		''' used for setting keys in dicts '''
+		return hash(self.value) # used for comparing keys in dicts
+	def __add__(self, other): 
+		''' does other + self.value '''
+		return other + self.value 
 class dat_number(dat_type):
-	''' included to give all number dats a common parent, that excludes str and lists'''
+	''' included to give all number dats a common parent, 
+		that excludes str and lists'''
 	__name__ = 'Generic Number'
-	pass
 class dat_int(dat_number):
+	''' used to hold integers and give them read/write to file'''
 	__name__ = 'int'
 	cast_type=int # try and cast it as an int
 	size = 4 # size in bytes
 	bincode = 'i' # integer using struct package
 class dat_short(dat_int):
+	''' used to hold shorts, python doesn't normally have them'''
 	__name__ = 'short'
 	size = 2 # size in bytes
 	bincode = 'h' # short using struct package
 class dat_float(dat_number):
+	''' used to hold floats'''
 	__name__ = 'float'
 	cast_type=float # try and cast is as a float
 	size = 4 # size in bytes
 	bincode = 'f' # float using struct package
 class dat_char(dat_type):
+	'''	used to hold idividual characters using 1 byte apiece '''
 	__name__ = 'char'
 	cast_type=str # try and cast it as a string 
 	size = 2 # size in bytes
 	bincode = 'c' # char using struct package
 	defaultvalue = ' '
 class dat_strchunk(dat_char):
+	''' this is a chunk of a string.
+		strigs are word indexed in scho18
+		not byte indexed. so they require 2 characters
+		so they take an even number of bytes'''
 	__name__ = 'str chunk'
 	chars_per_chunk = 2
 	size = chars_per_chunk * dat_char.size
 	bincode = str(chars_per_chunk) + 's'
 	defaultvalue = dat_char.defaultvalue * chars_per_chunk
 	def process_num_elems(self, listvalues):
+		''' overwrite the wrapper function of ddat_list
+			'''
 		return dat_str.process_num_elems(dat_str(), listvalues)
 	def listify(self, listvalues):
+		''' turns this into a list'''
 		return dat_str.listify(dat_str(), listvalues)
 		
 class dat_uet(dat_int):
-	__name__ = 'UET event'
 	''' UETs are very special Integers
 		they code a UET event which is composed of a time and code
 		and represnt it as an integer
@@ -145,6 +176,7 @@ class dat_uet(dat_int):
 		add 00 to the end of time 
 		and 00 to the end of code to properly read them as int and short  
 		'''
+	__name__ = 'UET event'
 	time = None
 	code = None
 	def __init__(self, value=None, code=None, time=None, **kwargs):
@@ -198,7 +230,6 @@ class dat_uet(dat_int):
 		return binstr
 	def __str__(self): return '%s (%s/%s)'%(self.value, self.time, self.code)
 class dat_list(dat_type):
-	__name__ = 'list'
 	''' more advanced thing. this holds an array of values
 		requires:
 		__elem_type__ to be another dat_class
@@ -208,6 +239,7 @@ class dat_list(dat_type):
 			that. it can be int or dat_int or dat_short
 		 
 		'''
+	__name__ = 'list'
 	def __init__(self, value=None, elem_type=None, num_elems=None, **kwargs):
 		''' if value provided ensures all elements are elem_type,
 			if num_elems is provided it will force vale to have that many elements
@@ -222,7 +254,7 @@ class dat_list(dat_type):
 
 			NOTE: this only supprts elem_types of simple things. like chars, floats, 
 			etc. but not lists of vectors or lists of lists etc.
-			'''
+		'''
 
 		primlog.debug(('Creating %s given v=%s, '
 					'etyp=%s, e=%s')%(type(self), value, elem_type, num_elems))
@@ -350,10 +382,17 @@ class dat_list(dat_type):
 		for v in self.value:
 			v.write(fp)
 		return loc
-	def __getitem__(self,k): return self.value[k] # self[2]
+	def __getitem__(self,k): 
+		''' allows you to get specfic items from this list self[k]'''
+		return self.value[k] # self[2]
 class dat_vec(dat_list):
+	''' this is effectively a list
+		the only difference is that when writing to the file it is preceeded 
+		by an integer describing the number of elements
+	'''
 	__name__ = 'vector'
 	def read(self, fp):# override list, read an int first
+		''' read a vec from a file'''
 		b_read = 0
 		n = dat_int()
 		n = dat_int().read(fp)
@@ -369,6 +408,7 @@ class dat_vec(dat_list):
 		primlog.info('read %s bytes. %s : %s'%(b_read, type(self), self.__dict__))
 		return self
 	def write(self, fp): # override list. write an int first
+		''' write a vec to a file'''
 		assert self.value is not None, 'value must be set before writing'
 		loc = fp.tell()
 		self.num_elems.write(fp)
@@ -376,6 +416,8 @@ class dat_vec(dat_list):
 			v.write(fp)
 		return loc
 	def setsize(self):
+		'''figure out what the size of this is based on the num_elems and 
+			elem_type then set self.size'''
 		self.size = dat_int.size
 		if self.value is None: return
 		s = dat_int.size
@@ -383,9 +425,13 @@ class dat_vec(dat_list):
 			s += v.size
 		self.size = s
 class dat_str(dat_list):
+	''' strings are lists of dat_strchunk
+		which means that they will always have an even number of characters
+		that is important because dat files always maintain word alignment'''
 	__name__ = 'str'
 	elem_type = dat_strchunk # strings are lists of chars
 	def __str__(self): 
+		'''return string representation of self'''
 		if self.value == None: return str(self.value)
 		return ''.join([str(v) for v in self.value])
 	def process_num_elems(self, listvalues):
@@ -421,6 +467,7 @@ class dat_str(dat_list):
 
 
 class unittests():
+	'''contiains testing code for development'''
 	def __init__(self):
 		''' every primitive can be set initially, or be read into
 			then it can be printed or written to a file

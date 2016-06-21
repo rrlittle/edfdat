@@ -121,7 +121,7 @@
 from utils import make_logger, logging, blocksize, roundup, wordsize
 from dat_primitives import dat_int, dat_float, dat_char, dat_list, dat_short, dat_str, \
 dat_vec, dat_uet, dat_strchunk, dat_type
-from __init__ import rglog, datumlistlog, datumlog
+from loggers import rglog, datumlistlog, datumlog
 import ipdb
 from random import random
 

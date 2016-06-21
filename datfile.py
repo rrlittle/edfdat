@@ -1,4 +1,4 @@
-from __init__ import dsetlog
+from loggers import dsetlog
 from datumobjects import datumlist
 import ipdb
 
@@ -99,7 +99,7 @@ class dataset(datumlist):
                 assert key in d
         # no errors raised return
     def assert_consistent_list_len(self, listolists):
-        ''' asserts that this is a list of list
+        ''' asserts that this is a list of lists
             and that all interior lists are of the same length'''
         self.assert_list_of_type(listolists, list)
         lengths = set([len(l) for l in listolists])
@@ -114,6 +114,14 @@ class dataset(datumlist):
 
 
 class sho18(dataset):
+    '''
+        this class represents a dataset that adheres to the scho18
+        schema. 
+
+        basically this calss adds one useful function. 
+        that's the populate function. which takes a nicely formatted
+        dictionary of values and fills this instance with those values. 
+    '''
     SCHNAM = 'scho18'
     scapend_words = 4  # each word is 2 character
     comment_words = 30
@@ -903,6 +911,9 @@ class sho18(dataset):
 
 
 class unittests():
+    ''' this class is full of testing code. 
+        used only during development. 
+    '''
     def __init__(self):
         dsetlog.warn('\n\n\n###RUNNING DATFILE UNIT TESTS')
         # IPython.embed(local_ns = locals())
@@ -1008,9 +1019,9 @@ class unittests():
                                 'TYPE' :  3,
                                 'VAL' :  'Variable value pass as array or str',
                             },
-                            {'NAME':'fxvar2',
-                            'TYPE': 2,
-                            'VAL':4}
+                            {   'NAME':'fxvar2',
+                                'TYPE': 2,
+                                'VAL':4}
                         ],
             COMENT = 'boo' ,  # STRING LENGTH 60   Subjective comment
             SUBTPAR =   [   # SUBTPAR
