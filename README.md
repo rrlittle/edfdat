@@ -1,4 +1,65 @@
-EDFDAT Explanation
+Developer Notes
+================
+
+Todo
+----------
+1. implement Datfile class within datfile.py
+    
+    this class would represent an entire datfile object. 
+    every datfile is composed of a directory and a number of 
+    datasets. 
+
+    - \_\_init\_\_  it will need to initialize a directory and an empty list of datasets.
+     
+    - add_dataset funciton. it probably would be easiest to pass it a populated dataset object. then developers should probably be prompted with all the arguments required, you'd also have to specify what dataset schema you'd like to use. which would require extra meta-data somehow. or involve a more complex call. However then you would rely on the user to set the dataset id, which could result in malformed datfiles. but since we're using this to make new datfiles every time it won't be that bad. a workaround would be to overwrite the datset id within this function, which is viable. 
+        + this function would add an entry to the directory and save the dataset object in an array of it's datasets.
+        + one complex thing would be to figure out the pointer to the block where the dataset lives. we don't really have a way to find pointers between datalists. 
+        + this class would be a child of a datumlist, so it can calculate it's own size already (inherited from datumlist). You can mod the size by block size (512 bytes) to figure out how many blocks this takes. then the next block is where the dataset starts.
+    - write function. which will write the directory to a file, then fill up the rest of the block with null bytes (or just use seek to force the file to be big enough). and finally write each dataset, being sure to align the blocks. 
+
+2. implement directory class within datfile.py
+    
+    this is exaclty like a dataset. except that it has some different datums yeah. so this should be supes easy. 
+
+    - \_\_init\_\_ this function takes the required datums and asserts their correct. and sets them
+    
+    - add_dataset this funciton should takes a dataset object and adds it to the directory. basically you need to populate the diretory header entry for the dataset. all the required stuff is already in the datset. 
+
+3. implement edf.py
+    
+    this will require a bunch of functions to parse edf files. most of those are already implemented in parseedf.py in the test-scripts edf_learning_environment on my github (https://github.com/rrlittle/edfdat_learning_environment)
+
+    it will also need a function that takes a mapper (yet to be precisely defined) that will be able to create a dataset object from the stuff in the eyelink file. that will be very experiment specific and also have to understand some stuff about what the dataset needs. probably making some assumptions too. 
+
+4. implement \_\_main\_\_.py
+
+    this will prompt you for a edf file, mapping file and what dataset to use (maybe. that might be handled by the mapping file.)
+
+    and then do all the things. 
+
+    1. parse the edf file. 
+    2. use the mapping file/script to produce a datset 
+    3. initialize datfile
+    4. add the dataset
+    5. write it to a file
+
+5. implement mapping script plugins. 
+
+    this is the only part that really will take a bit of thought. 
+    we need to figure out a way to define all the required datums for the datasets populate function. 
+
+    probably this will take the form of a python file. 
+    all variables such as channels and things that don't change can be predefined within the file. 
+    it could import a specific dataset and initialize it there. 
+
+    it also needs to parse the messages embedded into the eyelink experiment. and figure out what they mean. that will be stuff like was the experiment successful or not. things of that nature. 
+
+    probably how it will work is developers will make a new one for every experiment and include the in a special directory that will be loaded when main is run using the sys.listdir() and \_\_import\_\_() trick 
+
+
+
+
+General EDFDAT Explanation
 =============================
 
 The goal of this python package is to convert edf data files produced by eyelink into COM dat datafiles. 
