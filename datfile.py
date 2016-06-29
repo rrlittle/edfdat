@@ -3,6 +3,30 @@ from datumobjects import datumlist
 import ipdb
 
 
+
+
+class datfile(datumlist):
+    '''
+        this object represents  an entire datfile
+        which is composed of a file header and a number of datasets
+        how you make a datfile is initialize this object
+        then create your datasets for the file using their respective
+        populate functions. 
+        then call the self.add_dataset of your datfile. 
+
+    '''
+
+    # initialize jthe datfile directory with empty list of 
+    # datasets
+    def __init__(self, animalid):
+        pass
+    # adds a dataset entry to the directory 
+    # & saves the dataset to self.datasets
+    def add_dataset(self, initialized_dataset):
+        pass
+
+
+
 class dataset(datumlist):
     '''
         A dataset is a special datumlist
@@ -111,6 +135,7 @@ class dataset(datumlist):
         assert len(types) <= 1, 'multiple types in list'
         if len(lst) > 0:
             assert isinstance(lst[0], typ), 'not of type %s instead %s'%(typ, lst[0])
+
 
 
 class sho18(dataset):
