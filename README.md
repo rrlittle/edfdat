@@ -14,9 +14,22 @@ there are four components to the entire package
 there is an inbult hierarchy of inheritance that is important for developers to understand.
 the main file relies on all three of the other components in order to orchestrate them together.
 
-the edf parser is a very flat file. basically just a collection of functions that main can call.
+the edf parser is a very flat file. basically just a collection of functions that main can call in order to parse eyelink datafiles (edf files)
 
-the mapper 
+the mapper also has no dependencies. the user will be prompted for what mapper to use, which will vary based on the eyelink experiment being evaluated. these are simple scripts that will convert the dictionaries of data produced from the eyelink data (via the parse_eyelink function of edf.py) and converts it to an object required to fill a schema. 
+
+it's unclear at the moment if the mapper will create the dataset or it will return everything needed to main which will create thr dataset. it would probably be better to create the dataset within the mapper, which would make your selected dataset a dependency. 
+
+the datfile.py file has lots of dependencies. it is dependent on datuobjects.py which in turn is dependent on dat_primitievs.py
+
+
+In order to develop new things you'll need to do some testing. this program was written for python 2.7 and depends on ipdb for debugging. that's the only package used that's not builtin. 
+
+At the end of every  file I've included a unittests class which takes no arguments, but runs a bunch of testing functions on that file. that's the place to write testing code for any modules you write. then run the file using the command ```python "filename"``` ultimately once the thing is done or actually just when main is getting tested you can run ```python edfdat``` from the parent directory and everything will be good to go. 
+
+debugging and testing should be done in standard pythonic form. using whatever methods you feel comfortable with. 
+one important one is to set a breakpoint within the script 
+add the line ```import ipdb;ipdb.set_trace()``` which will pause the program, drop you into a terminal outfitted with gdb like commands i.e. n,c,w,l check out the notes [here](https://github.com/rrlittle/edfdat_learning_environment.git) for notes on ipdb. 
 
 
 Todo
@@ -33,7 +46,7 @@ Todo
         + this function would add an entry to the directory and save the dataset object in an array of it's datasets.
         + one complex thing would be to figure out the pointer to the block where the dataset lives. we don't really have a way to find pointers between datalists. 
         + this class would be a child of a datumlist, so it can calculate it's own size already (inherited from datumlist). You can mod the size by block size (512 bytes) to figure out how many blocks this takes. then the next block is where the dataset starts.
-    - write function. which will write the directory to a file, then fill up the rest of the block with null bytes (or just use seek to force the file to be big enough). and finally write each dataset, being sure to align the blocks. 
+    - write function. which will write the datfile to a file, then fill up the rest of the block with null bytes (or just use seek to force the file to be big enough). and finally write each dataset, being sure to align the blocks. 
 
 2. implement directory class within datfile.py
     
