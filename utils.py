@@ -5,6 +5,8 @@ from datetime import datetime
 import logging
 from os.path import isfile
 from math import ceil
+from Tkinter import Tk
+from tkFileDialog import askopenfilename
 
 class null_logging: 
 	''' an empty logger that can be used instead pf logging

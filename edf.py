@@ -23,7 +23,9 @@
 '''
 
 from os.path import join
+import utils
 import re
+from loggers import edflog
 
 def open_edf(path=['temp.txt']):
 	''' opens a asci version of an edf file and returns the pointer
@@ -236,7 +238,7 @@ def parse_trial_set(tr_list,
             ret[tr_type].append(parsed_trial)
     return ret 
 
-def parse_edf(edfpath, logger=logging):
+def parse_edf(edfpath=None, logger=logging):
     ''' this takes a file path to an edf file and 
         parses it. this does not attempt to parse the messages in the trials
         that will be the callee's responsibility
@@ -245,6 +247,9 @@ def parse_edf(edfpath, logger=logging):
         a mapper which will turn it into a dictionary suitable for 
         the schemas populate function. 
     '''
+    if edfpath is None: edfpath= utils.askopenfilename(
+        title='please choose an edf file to parse'
+        )
     f = open_edf(edfpath)
     sets = get_trial_sets(f) # breaks edf into trial sets.
     hdr = sets[0] # grab the header as it's special
@@ -276,3 +281,12 @@ def parse_edf(edfpath, logger=logging):
 
     return {'header':hdr,
             'trials':parsed_trs}
+
+class unitests():
+    def __init__(self):
+        # parse edf file and print
+        self.openedfprint()
+
+    def openedfprint(self):
+        ''' parses an example edf file. shouldn't matter what kind'''
+        parsed = parse_edf()
