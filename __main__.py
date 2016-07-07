@@ -12,16 +12,35 @@ import IPython
 from loggers import primlog, rglog, datumlistlog, datumlog, dsetlog
 from datumobjects import datum
 import datfile
-
-def process_edf_file():
-	''' this function prompts the user for an edf file and for 
-		a mappings file to convert the edf files into a datfile. 
-
-	'''
-	pass 
+from edf import parse_edf
+import utils
 
 
-if __name__ == '__main__': 
-	process_edf_file()
+def new_dataset():
+	mappfile = utils.get_mapping() # let user select mapping
+	parsed = parse_edf() # turn edf file into a dic
+	# apply map to parsed edf file to create a dataset object
+	dset = utils.apply_map(parsed, mapfile)
+	
+def get_datfile():
+	while True:
+		inp = raw_input((	'would you like a new dset (y/n)'
+							' n will prompt you to grab existing')).lower()
+		if inp == 'y': return util.create_datfile()
+		elif inp == 'n': 
+			datfilpath = utils.askopenfilename(title ='please select a datfile')
+			print 'opening datfiles is not implemented. please try again.'
+			continue
+			return datfile(open=datfilepath)
+		else: '%s is not a valid option. please try again'
 
-IPython.embed(local_ns = locals())
+if __name__ == '__main__': 	
+	datfileobj = get_datfile()
+	while True:
+		dset = new_dataset()
+		datfileobj.add_dataset(dset)
+		inp = raw_input('done? (y/n/abort)').lower()
+		if inp == 'y': break
+		elif inp == 'n': continue
+		elif inp == 'abort': utils.exit()
+	datfileobj.write()

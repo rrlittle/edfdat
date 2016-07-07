@@ -8,6 +8,8 @@ from math import ceil
 from Tkinter import Tk
 from tkFileDialog import askopenfilename
 
+Tk().withdraw()
+
 class null_logging: 
 	''' an empty logger that can be used instead pf logging
 		hopefully this will help stop double printing using
@@ -127,10 +129,3 @@ def load_task_defs():
 
 		this loads them into the program '''
 	raise NotImplementedError
-
-# datumlog = make_logger('datum_creation_log', 
-	# frmt='%(name)s:%(message)s', 
-	# fpath='datum_creation_log')
-# primitivelog = make_logger('primitive_creation_log',
-	# frmt='%(name)s:%(message)s',
-	# fpath='primitive_creation_log')
