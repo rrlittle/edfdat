@@ -1,11 +1,11 @@
-from loggers import dsetlog
+from loggers import dsetlog, datflog
 from datumobjects import datumlist
 import ipdb
 
 
 
 
-class datfile(datumlist):
+class datfile(dataset):
     '''
         this object represents  an entire datfile
         which is composed of a file header and a number of datasets
@@ -15,16 +15,130 @@ class datfile(datumlist):
         then call the self.add_dataset of your datfile. 
 
     '''
+    # directories have 2 uused sections
+    UNUSED1_LEN = 2  # 4 chars
+    UNUSED2_LEN = 16 # 32 chars
 
-    # initialize jthe datfile directory with empty list of 
-    # datasets
-    def __init__(self, animalid):
-        pass
-    # adds a dataset entry to the directory 
-    # & saves the dataset to self.datasets
-    def add_dataset(self, initialized_dataset):
-        pass
+    def __init__(self, animalid = 'defaultid', openexisting=False):
+        '''initialize jthe datfile directory with empty list of 
+            datasets
 
+            include openexising if you want to load an existing 
+            file
+
+            the diretory includes 
+            animal id str - 12 char
+            number of datasets- int 
+            number of blocks in directory - int
+            unused - str
+            last updated - str
+            unused - str
+            dataset header - rg
+                name -str
+                size - int
+                id - int
+                start - int
+                exp - str
+
+        '''
+        datumlist.__init__(self) # do the super to set this up
+    
+        # we aren't supporting this yet.
+        if openexisting: 
+            raise NotImplementedError('open exising not implemented') 
+            return # don't do anything else after it's been loaded
+
+        # if it hasn't been loaded in. include all the neccessary stuff
+        self.datasets = [] # makes this an actual datumlist
+                
+        self.add('SubjectID', 'str',str(animalid), num_elems=self.ANID_LEN,
+            description='name of the subject')
+
+        # this gets updated by dataset headers
+        self.add('num datasets', 'int', 0, 
+            description='numer of datasets in this datafile')
+
+        self.add('blocks in dir', 'int', self.size_in_blocks,
+            description=('the number of blocks taken up by the directory '
+                'of this datfile'))
+        
+        self.add('unused','str','', num_elems=self.UNUSED1_LEN,
+            description='not sure why this was a good idea to include')
+
+        self.add('last updated', 'str', utils.gettime(),
+            num_elems=self.DATE_LEN, 
+            description='when was this file last edited?')
+
+        self.add('unused2', 'str', '', num_elems=self.UNUSED2_LEN,
+            description='not sure why this was a good idea to include')
+
+        self.add('DSETS','rg', num_elems='num datasets',
+            descriptions='entries describing what datasets are in the datfile')
+
+        # prepare for adding datasets
+        self['DSETS'].add('schname', 'str', num_elems=self.SCHNAM_LEN,
+                        description='name of the scheme of this dataset')
+        self['DSETS'].add('size','int',
+                        description='dataset size in blocks')
+        self['DSETS'].add('id','str', num_elems=self.DSID_LEN, 
+                        description='dataset/experiment id. mus be unique')
+        self['DSETS'].add('start','int',
+                        description='block number where dataset starts')
+        self['DSETS'].add('exp','str',  num_elems=self.EXP_LEN, 
+                        description='experiment type. e.g. Populin uses COM')
+
+        self.calc_size()
+
+    def add_dataset(self, comp_dset):
+        ''' adds a dataset entry to the directory 
+            & saves the dataset to self.datasets
+            comp_dset must be an instance of a full dataset
+        '''
+        assert (isinstance(comp_dset, dataset) 
+            and not isinstance(comp_dset, datfile)), (
+            'add dataset requires an initialized dataset not %s'%comp_dset) 
+
+        dsets = self['DSETS']
+        dsets.add_group()
+        lastdset = dsets[-1] 
+
+        lastdset['schname'].set(comp_dset['SCHNAM'])
+        lastdset['size'].set(comp_dset['size'])
+        
+        dsetid = comp_dset['DSID']
+        # check conflict in current self.datasets
+        # if there's a conflict in the dsetid, 
+        # overwrite the dataset id 
+        if self.dsid_conflict(dsetid): 
+            dsetid=len(self.datasets)
+            comp_dset['DSID'].set(str(dsetid))
+        lastdset['id'].set(str(dsetid))
+
+        # add this to self.datasets. needed for calc_startblock  
+        self.datasets.append(comp_dset)
+        
+        # looks for start loc for last dset in self.datatsets
+        loc = self.calc_startblock() 
+        lastdset['start'].set(loc)
+
+        lastdset['exp'].set(comp_dset['EXPTYP'])
+
+        self.calc_size()
+
+    def write(self, fp=None):
+        ''' write sthe contents of this datfile to a file'''
+        raise NotImplementedError('writes not done')
+
+    def calc_startblock(self, index=-1):
+        ''' this calculates the block where the indicated data starts
+            if the index is -1 will find the start of the last block 
+        '''
+        indicated_datasets = self.datasets[0:index] 
+        
+        blocks = self.size_in_blocks()
+        for dset in indicated_datasets:
+            blocks += dset.size_in_blocks()
+        return blocks + 1 # go to the next one. 
 
 
 class dataset(datumlist):
@@ -83,6 +197,7 @@ class dataset(datumlist):
             num_elems=self.ANID_LEN, 
             description='subject ID')
 
+        # sometimes overwritten by the datfile
         self.add('DSID', 'str', str(DSID), 
             num_elems=self.DSID_LEN, 
             description='dataset ID')
@@ -337,7 +452,8 @@ class sho18(dataset):
             COILINF, LEDPOS, SPKPOS, DATA, STATTB)
         
         # check consitent NSEQ
-        assert len(DATA) == len(STATTB), 'STATTB and DATA must have the same no trials'
+        assert len(DATA) == len(STATTB), ('STATTB and DATA must have'
+                                            ' the same no trials')
         # check consitent NACH
         try:
             andatas= []
@@ -353,27 +469,38 @@ class sho18(dataset):
         # UET Data
         try:
             udata = self.check_presence('UDATA', DATA) # return 1/0/error if DATA is bad
-            self.add('UDATAPresent', 'int', udata, description='0 No UET data, 1 Yes UET data') 
+            self.add('UDATAPresent', 'int', udata, 
+                description='0 No UET data, 1 Yes UET data') 
         except AssertionError,e: raise AssertionError('DATA Must be be a list of dicts')
 
         # ANDATA
         try:
             adata = self.check_presence('ANDATA',DATA) 
-            self.add('ANDATAPresent', 'int', adata, description='0 No A/D data, 1 Yes A/D data')
-        except AssertionError,e: raise AssertionError('DATA Must be be a list of dicts')
+            self.add('ANDATAPresent', 'int', adata, 
+                        description='0 No A/D data, 1 Yes A/D data')
+        except AssertionError,e: 
+            raise AssertionError('DATA Must be be a list of dicts')
 
         # CMDATA
         try:
             cmdata = self.check_presence('CMDATA',DATA)
-            self.add('CMDATAPresent', 'int', cmdata, description='0 No CM data, 1 Yes CM data')
-        except AssertionError,e: raise AssertionError('DATA Must be be a list of dicts')
+            self.add('CMDATAPresent', 'int', cmdata, 
+                        description='0 No CM data, 1 Yes CM data')
+        except AssertionError,e: 
+            raise AssertionError('DATA Must be be a list of dicts')
  
-        self.add('STRTCH','int', STRTCH, description='Start sync. UET channel number')
-        self.add('TERMCH','int', TERMCH, description='Terminate UET channel number')
-        self.add('INWCH','int', INWCH, description='Enter Window UET channel number')
-        self.add('REWCH','int', REWCH, description='Reward start UET channel number')
-        self.add('ENDCH','int', ENDCH, description='End Trial UET channel number')
-        self.add('TBASE','int', TBASE, description='UET times base in seconds')
+        self.add('STRTCH','int', STRTCH, 
+                    description='Start sync. UET channel number')
+        self.add('TERMCH','int', TERMCH, 
+                    description='Terminate UET channel number')
+        self.add('INWCH','int', INWCH, 
+                    description='Enter Window UET channel number')
+        self.add('REWCH','int', REWCH, 
+                    description='Reward start UET channel number')
+        self.add('ENDCH','int', ENDCH, 
+                    description='End Trial UET channel number')
+        self.add('TBASE','int', TBASE, 
+                    description='UET times base in seconds')
 
         # scho18 always has a stat table type 3. see basement documentation for more.
         # althought the schema is included in this
@@ -382,17 +509,21 @@ class sho18(dataset):
         
         # NUMPT = number of ADDRPTs in STATTB
         # filled in automatically as num_elems in STATTB
-        self.add('NUMPT', 'int', description='Number of pointers per trial in STATTB') 
+        self.add('NUMPT', 'int', 
+                    description='Number of pointers per trial in STATTB') 
 
         # LSTAT
         stattb_pointer = lambda: self.get_pointer('STATTB')
-        self.add('LSTAT','int',stattb_pointer, description='Location of Status table')
+        self.add('LSTAT','int',stattb_pointer, 
+                    description='Location of Status table')
 
         # NSEQ link this to STATTB and DATA
         # filled in automatically as num_elems in DATA and STATTB
-        self.add('NSEQ','int', description='No of trials. i.e. rows in STATTB and DATA') 
+        self.add('NSEQ','int', 
+                    description='No of trials. i.e. rows in STATTB and DATA') 
 
-        self.add('RNSEED', 'int', RNSEED, description='seed used for RNG')
+        self.add('RNSEED', 'int', RNSEED, 
+                            description='seed used for RNG')
         self.add('TGRACL1', 'float', TGRACL1, 
                             description=  'Grace time for LED-1 ? (secs)')
         self.add('TSPOTL1', 'float', TSPOTL1, 
@@ -404,9 +535,9 @@ class sho18(dataset):
         self.add('SPONTIM', 'float', SPONTIM, 
                             description=  'Spontaneous time ? (secs)')
         self.add('ISDREW', 'float', ISDREW, 
-                            description=   'Inter-seq delay after reward (secs)')
+                        description=   'Inter-seq delay after reward (secs)')
         self.add('ISDNOREW', 'float', ISDNOREW, 
-                            description= 'Inter-seq delay after no-reward (secs)')
+                        description= 'Inter-seq delay after no-reward (secs)')
         self.add('ATTLOW', 'float', ATTLOW, 
                             description=   'Attenuator low value (dB)')
         self.add('ATTHIGH', 'float', ATTHIGH, 
@@ -415,51 +546,60 @@ class sho18(dataset):
                             description=   'Attn. Step size (dB)')
         
         app_data_loc = lambda: self.get_pointer('STATTB')
-        self.add('LAPEND', 'int', app_data_loc, description='Loc of "appended data"')
+        self.add('LAPEND', 'int', app_data_loc, 
+                            description='Loc of "appended data"')
 
 
         self.add('SCAPEND', 'str', SCAPEND, num_elems=self.scapend_words, 
-            description='schema name for appended data')
+                        description='schema name for appended data')
 
         def len_fxpar_words(self):
             if hasattr(self.get('FXPAR'), 'size'): return self.get('FXPAR').size
             else: return -1
+
         len_fxpar_words_ref = lambda: len_fxpar_words(self)
-        self.add('LFXPAR', 'int', len_fxpar_words_ref, description='Length of FXPAR in words')
-        self.add('NFXPAR', 'int', description='No vars in FXPAR') 
+        self.add('LFXPAR', 'int', len_fxpar_words_ref, 
+                        description='Length of FXPAR in words')
+        self.add('NFXPAR', 'int', 
+                        description='No vars in FXPAR') 
         # gets filled automatically
 
         # FXPAR
         self.add('FXPAR','rg', num_elems='NFXPAR', 
-            description='Fixed variables for subject')
+                            description='Fixed variables for subject')
 
         self['FXPAR'].add('FXVNAM', 'str', num_elems=self.var_name_words, 
-            description='Fixed variable name')
+                                description='Fixed variable name')
         self['FXPAR'].add('FXVTYP', 'short', 
-            description='Fixed Var type 1=int,2=fp,3=char')
-        self['FXPAR'].add('FXVLEN', 'short', description='No. words in variable list')
-        self['FXPAR'].add('FXVVAL','list', elem_type='FXVTYP', num_elems='FXVLEN', 
-            description='Value of fixed variable')
+                    description='Fixed Var type 1=int,2=fp,3=char')
+        self['FXPAR'].add('FXVLEN', 'short', 
+                    description='No. words in variable list')
+        self['FXPAR'].add('FXVVAL','list', elem_type='FXVTYP', 
+                                num_elems='FXVLEN', 
+                                description='Value of fixed variable')
 
         for i,grp in enumerate(FXPAR):
             self['FXPAR'].add_group()
             self['FXPAR'][i]['FXVNAM'].set(grp['NAME'])
             self['FXPAR'][i]['FXVTYP'].set(grp['TYPE'])
-            self['FXPAR'][i]['FXVVAL'].set(grp['VAL']) # automatically sets FXVLEN
+            self['FXPAR'][i]['FXVVAL'].set(grp['VAL']) # auto sets FXVLEN
 
         self.add('COMENT', 'str', COMENT, num_elems=self.comment_words, 
-            description='Subjective comment')
+                        description='Subjective comment')
 
         # SUBTASK PARAMS 
 
         self.add('NSUBTASK', 'int', description='No subtasks in experiment')
         # filled automatically by linking to SUBTPAR
-        self.add('SUBTPAR', 'rg', num_elems='NSUBTASK', description='Subtask parameters')
+        self.add('SUBTPAR', 'rg', num_elems='NSUBTASK', 
+                        description='Subtask parameters')
 
-        self['SUBTPAR'].add('LSUBTPARV', 'int', description='Lenth of SUBTPARV in words')
-        self['SUBTPAR'].add('NSUBTPARV', 'int', description='no of SUBTPARV in words')
+        self['SUBTPAR'].add('LSUBTPARV', 'int', 
+                                    description='Lenth of SUBTPARV in words')
+        self['SUBTPAR'].add('NSUBTPARV', 'int', 
+                                    description='no of SUBTPARV in words')
         self['SUBTPAR'].add('SUBTPARV', 'rg', num_elems='NSUBTPARV',
-            description='Variables for this subtask')
+                                    description='Variables for this subtask')
 
         for i,grp in enumerate(SUBTPAR):
             self['SUBTPAR'].add_group()
@@ -473,33 +613,40 @@ class sho18(dataset):
             # set up internal rep group 
             subtparv = self['SUBTPAR'][i]['SUBTPARV']
             subtparv.add('SUBTVNAM', 'str', 
-                num_elems=self.var_name_words, description='name of subtask variable')
+                num_elems=self.var_name_words, 
+                description='name of subtask variable')
             subtparv.add('SUBTVTYP', 'short', 
                 description='Sub-Task Var type 1=int,2=fp,3=char')
-            subtparv.add('SUBTVLEN', 'short', description='no. words in variable list')
-            subtparv.add('SUBTVVAL', 'list', num_elems='SUBTVLEN', elem_type='SUBTVTYP',
+            subtparv.add('SUBTVLEN', 'short', 
+                description='no. words in variable list')
+            subtparv.add('SUBTVVAL', 'list', num_elems='SUBTVLEN', 
+                elem_type='SUBTVTYP',
                 description='value of subtask variable')
 
             for j,var in enumerate(grp):
                 subtparv.add_group()
                 subtparv[j]['SUBTVNAM'].set(var['NAME'])
                 subtparv[j]['SUBTVTYP'].set(var['TYPE'])
-                subtparv[j]['SUBTVVAL'].set(var['VAL']) # automatically sets SUBTVLEN
+                subtparv[j]['SUBTVVAL'].set(var['VAL']) # auto sets SUBTVLEN
 
             
-        self.add('AVOLC', 'float', AVOLC, description='Voltage conversion factor')
-        self.add('AVCC', 'int', AVCC, description='Voltage Conversion Code')
-        self.add('ANBITS', 'int', ANBITS, description='No. of bits per sample 16/32')
+        self.add('AVOLC', 'float', AVOLC, 
+                        description='Voltage conversion factor')
+        self.add('AVCC', 'int', AVCC, 
+                        description='Voltage Conversion Code')
+        self.add('ANBITS', 'int', ANBITS, 
+                        description='No. of bits per sample 16/32')
 
         # analog channels
-        self.add('NACH', 'int', description='No. of A/D channels') # filled automatically
+        self.add('NACH', 'int', description='No. of A/D channels') # autofilled
         self.add('ADCH', 'rg',num_elems='NACH', 
             description='Analog channel configuration')
 
         # set up repgroup
         self['ADCH'].add('ACHAN', 'int', description=' A/D channel no.')
         self['ADCH'].add('SRATE', 'float', description='Sampling rate (hz)')
-        self['ADCH'].add('ASAMPT', 'float', description='Analog sampling time in sec')
+        self['ADCH'].add('ASAMPT', 'float', 
+                                description='Analog sampling time in sec')
         self['ADCH'].add('NSAMP', 'int', description='Number of A/D samples')
 
         for i,grp in enumerate(ADCH):
@@ -510,17 +657,21 @@ class sho18(dataset):
             self['ADCH'][i]['NSAMP'].set(grp['NSAMP'])
 
 
-        self.add('COILCODE', 'int', COILCODE, description='Coil calib. code (1,2,3 etc.)')
+        self.add('COILCODE', 'int', COILCODE, 
+                            description='Coil calib. code (1,2,3 etc.)')
         self.add('NCOILCOF', 'int', description='No of coil calibration coefs')
         self.add('NCOIL', 'int', description='No. of coils')
-        self.add('COILINF', 'rg', num_elems='NCOIL', description='Coil configurations')
+        self.add('COILINF', 'rg', num_elems='NCOIL', 
+                            description='Coil configurations')
 
         self['COILINF'].add('COILPOS','str', num_elems=self.var_name_words, 
             description='Coil position name')
-        self['COILINF'].add('ADCHX', 'int', description='A/D chan no. for X-position')
-        self['COILINF'].add('ADCHY', 'int', description='A/D chan no. for Y-position')
+        self['COILINF'].add('ADCHX', 'int', 
+                                description='A/D chan no. for X-position')
+        self['COILINF'].add('ADCHY', 'int', 
+                                description='A/D chan no. for Y-position')
         self['COILINF'].add('COILCOF', 'rg', num_elems='NCOILCOF', 
-            description='Coil coefficients')
+                                description='Coil coefficients')
 
         for i,coil in enumerate(COILINF):
             self['COILINF'].add_group()
@@ -530,8 +681,10 @@ class sho18(dataset):
             coilinf['COILPOS'].set(coil['COILPOS'])
             coilinf['ADCHX'].set(coil['ADCHX'])
             coilinf['ADCHY'].set(coil['ADCHY'])
-            coilinf['COILCOF'].add('COFX', 'float', description='coil coefficients for x')
-            coilinf['COILCOF'].add('COFY', 'float', description='coil coefficients for y')
+            coilinf['COILCOF'].add('COFX', 'float', 
+                                    description='coil coefficients for x')
+            coilinf['COILCOF'].add('COFY', 'float', 
+                                    description='coil coefficients for y')
 
             for j,coef in enumerate(coil['COILCOF']):
                 coilinf['COILCOF'].add_group()
@@ -539,21 +692,26 @@ class sho18(dataset):
                 coilcof['COFX'].set(coef['COFX'])
                 coilcof['COFY'].set(coef['COFY'])
 
-        self.add('AVOLCCM', 'float', AVOLCCM, description='Volt conversion factor for CM')
-        self.add('AVCCCM', 'int', AVCCCM, description='Voltage conversion code for CM')
-        self.add('ANBITSCM', 'int', ANBITSCM, description='Bits/sample for CM (16 or 32)')
-        self.add('ACHANCM', 'int', ACHANCM, description='Channel number for CM')
-        self.add('NUMCM', 'int', description='Number of CM recordings per trial')
+        self.add('AVOLCCM', 'float', AVOLCCM, 
+                            description='Volt conversion factor for CM')
+        self.add('AVCCCM', 'int', AVCCCM, 
+                            description='Voltage conversion code for CM')
+        self.add('ANBITSCM', 'int', ANBITSCM, 
+                            description='Bits/sample for CM (16 or 32)')
+        self.add('ACHANCM', 'int', ACHANCM, 
+                            description='Channel number for CM')
+        self.add('NUMCM', 'int', 
+                            description='Number of CM recordings per trial')
         # filled in automatically during DATA
         self.add('NUMLED', 'int', description='Total number of LEDs')
         # filled in automatically during LEDPOS
 
         self.add('LEDPOS', 'rg', num_elems='NUMLED', 
-            description='LED positions')
+                        description='LED positions')
         self['LEDPOS'].add('LEDPAZIM', 'float', 
-            description='LED azimuth position (-180 to +180)')
+                        description='LED azimuth position (-180 to +180)')
         self['LEDPOS'].add('LEDPELEV', 'float',
-         description='LED elevation position (-90 to +90)')
+                        description='LED elevation position (-90 to +90)')
 
         for i, led in enumerate(LEDPOS):
             self['LEDPOS'].add_group()
@@ -562,12 +720,13 @@ class sho18(dataset):
             ledpos['LEDPELEV'].set(led['ELEV'])
 
         self.add('NUMSPK', 'int', description='Total nunmber of Speakers')
-        self.add('SPKPOS', 'rg', num_elems='NUMSPK', description='Speaker positions')
+        self.add('SPKPOS', 'rg', num_elems='NUMSPK', 
+                        description='Speaker positions')
 
         self['SPKPOS'].add('SPKPAZIM', 'float', 
-            description='Speaker azimuth pos. (-180 to +180)')
+                            description='Speaker azimuth pos. (-180 to +180)')
         self['SPKPOS'].add('SPKPELEV', 'float', 
-            description='Speaker elevation pos. (-90 to +90)')
+                            description='Speaker elevation pos. (-90 to +90)')
 
         for i,spk in enumerate(SPKPOS):
             self['SPKPOS'].add_group()
@@ -577,18 +736,21 @@ class sho18(dataset):
 
 
         self.add('LDUMMY', 'int', 1, description='Length of DUMMY in words')
-        self.add('DUMMY', 'str', '', num_elems='LDUMMY', description='Nothing useful')
+        self.add('DUMMY', 'str', '', num_elems='LDUMMY', 
+                            description='Nothing useful')
 
-        self.add('DATA', 'rg', num_elems='NSEQ', description='Data, organized by trials')
+        self.add('DATA', 'rg', num_elems='NSEQ', 
+                        description='Data, organized by trials')
         
         self['DATA'].add('UDATA', 'vec', elem_type='uet', 
-            description='UET events in this trial')
+                                description='UET events in this trial')
         self['DATA'].add('ANDATA', 'rg', num_elems='NACH', 
-            description='sampled analog data')
+                                description='sampled analog data')
         self['DATA'].add('CMDATA', 'rg', num_elems='NUMCM',  
-            description='sampled cm data')
+                                description='sampled cm data')
         self['DATA'].add('NDERV', 'int', description='No Derived variables')
-        self['DATA'].add('DERV', 'rg', num_elems='NDERV', description='Derived variables')
+        self['DATA'].add('DERV', 'rg', num_elems='NDERV', 
+                                description='Derived variables')
 
 
         for i,trial in enumerate(DATA):
@@ -599,8 +761,9 @@ class sho18(dataset):
             if 'UDATA' in trial: data['UDATA'].set(trial['UDATA'])
             else: data['UDATA'].set([])
 
-
-            dsetlog.warn(str(type(data['ANDATA'])) + ':' + str(data['ANDATA'].__dict__))
+            dsetlog.warn( '%s : %s'%(
+                        type(data['ANDATA']),
+                            data['ANDATA'].__dict__)) 
 
             # ipdb.set_trace()
             data['ANDATA'].add('ANDATA_VECTOR', 'vec', elem_type='short')
@@ -618,9 +781,10 @@ class sho18(dataset):
             data['DERV'].add('DERVNAM','str', num_elems=self.var_name_words, 
                 description='name of derived var')
             data['DERV'].add('DERVTYP','short', description='variable type')
-            data['DERV'].add('DERVLEN', 'short', description='length in 32 bit wrds')
-            data['DERV'].add('DERVAL', 'list', elem_type='DERVTYP', num_elems='DERVLEN', 
-                description='val of derived var')
+            data['DERV'].add('DERVLEN', 'short', 
+                    description='length in 32 bit wrds')
+            data['DERV'].add('DERVAL', 'list', elem_type='DERVTYP', 
+                num_elems='DERVLEN', description='val of derived var')
 
             for j,var in enumerate(trial['DERV']):
                 data['DERV'].add_group()
@@ -630,9 +794,11 @@ class sho18(dataset):
                 derv['DERVAL'].set(var['VAL'])
 
 
-        self.add('STATTB', 'rg', num_elems='NSEQ', description='Type 3 status table')
+        self.add('STATTB', 'rg', num_elems='NSEQ', 
+                        description='Type 3 status table')
         
-        self['STATTB'].add('NVSTAT', 'int', description='No. of vars in this row')
+        self['STATTB'].add('NVSTAT', 'int', 
+                                description='No. of vars in this row')
         self['STATTB'].add('STVARS', 'rg', num_elems='NVSTAT', 
             description='Status table variables')
         self['STATTB'].add('ADDRPT', 'list', num_elems='NUMPT', elem_type='int')
@@ -644,11 +810,13 @@ class sho18(dataset):
 
             entry['STVARS'].add('STVNAM', 'str', num_elems=self.var_name_words, 
                 description='name of status variable')
-            entry['STVARS'].add('STVTYP', 'short', description= 'type of status var')
+            entry['STVARS'].add('STVTYP', 'short', 
+                                        description= 'type of status var')
             entry['STVARS'].add('STVLEN', 'short', 
                 description='Len of status var in words')
-            entry['STVARS'].add('STVAL', 'list', elem_type='STVTYP', num_elems='STVLEN', 
-                description='status table variable value')
+            entry['STVARS'].add('STVAL', 'list', elem_type='STVTYP', 
+                                    num_elems='STVLEN', 
+                                    description='status table variable value')
 
             for j,vardef in enumerate(trial['STVARS']):
                 entry['STVARS'].add_group()
@@ -660,9 +828,11 @@ class sho18(dataset):
 
             uetandandata_locs = lambda: [
                 self['DATA'][i].get_pointer('UDATA') \
-                    + self.get_pointer([{'name':'DATA'},{'name':'UDATA','index':i}]),
+                    + self.get_pointer([{'name':'DATA'},
+                                        {'name':'UDATA','index':i}]),
                 self['DATA'][i].get_pointer('ANDATA') \
-                    + self.get_pointer([{'name':'DATA'},{'name':'UDATA','index':i}])
+                    + self.get_pointer([{'name':'DATA'},
+                                        {'name':'UDATA','index':i}])
             ]
             entry['ADDRPT'].set(uetandandata_locs)
 

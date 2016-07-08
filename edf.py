@@ -29,8 +29,8 @@
 
 '''
 
-from os.path import join
 import utils
+from utils import join
 import re
 from loggers import edflog
 

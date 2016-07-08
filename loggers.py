@@ -5,8 +5,36 @@ frmt = '%(name)s:%(levelno)s:%(lineno)s:%(message)s'
 
 truncfile(debuglog)
 
-# for logging things in dat_primitive
-edflog = make_logger('edf_logger',
+# for logging things in edf
+edflog = make_logger('edf_log',
+    frmt=frmt,
+    fpath=debuglog,
+    stdout=True,
+    # lvl=logging.DEBUG, # use one of the following to easily set the stdout log level
+    # lvl=logging.INFO,
+    lvl=logging.WARNING,
+    # lvl=logging.ERROR,
+    # lvl=logging.CRITICAL,
+    flvl = logging.WARNING
+    )
+
+
+# for logging things in main
+mainlog = make_logger('main_log',
+    frmt=frmt,
+    fpath=debuglog,
+    stdout=True,
+    # lvl=logging.DEBUG, # use one of the following to easily set the stdout log level
+    # lvl=logging.INFO,
+    lvl=logging.WARNING,
+    # lvl=logging.ERROR,
+    # lvl=logging.CRITICAL,
+    flvl = logging.WARNING
+    )
+
+
+# for logging things in datfiles
+datflog = make_logger('datfile_log',
     frmt=frmt,
     fpath=debuglog,
     stdout=True,

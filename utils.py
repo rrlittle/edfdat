@@ -7,6 +7,9 @@ from os.path import isfile
 from math import ceil
 from Tkinter import Tk
 from tkFileDialog import askopenfilename
+from sys import exit
+from datetime import datetime
+
 
 Tk().withdraw()
 
@@ -114,9 +117,23 @@ def roundup(decimal): return ceil(decimal)
 wordsize = 4.0 # number of bytes to a word
 blocksize = 512.0 # number of bytes to a block
 
+def gettime(time=None, frmt='%d%b-%y'):
+	''' returns a string like dat files like. 
+		DDMMM-YY e.g. 15Oct-09
+		http://strftime.org/ has refs for stftime format 
+		arguments
+	'''
+	if time: time = datetime(time)	
+	else: time = datetime.now()
+	return time.strftime(frmt)
 
 
 ###### TO DO
+def get_mapping():
+	''' gets a mapping somehow. verifies it's validity.
+		and returns it
+	'''
+	pass
 def verify_task_def(task_def_module):
 	''' this ensures task definition file is 'well formatted'
 		i.e. it contains everything needed to parse an edf file
@@ -129,3 +146,11 @@ def load_task_defs():
 
 		this loads them into the program '''
 	raise NotImplementedError
+def apply_map(parsededf, mapfile):
+	''' applies a mapfile to the parsed edf
+		which structures it to a dict required for  schema
+		then creates the dataset.
+
+		returns filled dataset or error
+	'''
+	pass
