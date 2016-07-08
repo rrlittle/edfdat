@@ -1,144 +1,10 @@
 from loggers import dsetlog, datflog
 from datumobjects import datumlist
 import ipdb
+import utils
 
 
 
-
-class datfile(dataset):
-    '''
-        this object represents  an entire datfile
-        which is composed of a file header and a number of datasets
-        how you make a datfile is initialize this object
-        then create your datasets for the file using their respective
-        populate functions. 
-        then call the self.add_dataset of your datfile. 
-
-    '''
-    # directories have 2 uused sections
-    UNUSED1_LEN = 2  # 4 chars
-    UNUSED2_LEN = 16 # 32 chars
-
-    def __init__(self, animalid = 'defaultid', openexisting=False):
-        '''initialize jthe datfile directory with empty list of 
-            datasets
-
-            include openexising if you want to load an existing 
-            file
-
-            the diretory includes 
-            animal id str - 12 char
-            number of datasets- int 
-            number of blocks in directory - int
-            unused - str
-            last updated - str
-            unused - str
-            dataset header - rg
-                name -str
-                size - int
-                id - int
-                start - int
-                exp - str
-
-        '''
-        datumlist.__init__(self) # do the super to set this up
-    
-        # we aren't supporting this yet.
-        if openexisting: 
-            raise NotImplementedError('open exising not implemented') 
-            return # don't do anything else after it's been loaded
-
-        # if it hasn't been loaded in. include all the neccessary stuff
-        self.datasets = [] # makes this an actual datumlist
-                
-        self.add('SubjectID', 'str',str(animalid), num_elems=self.ANID_LEN,
-            description='name of the subject')
-
-        # this gets updated by dataset headers
-        self.add('num datasets', 'int', 0, 
-            description='numer of datasets in this datafile')
-
-        self.add('blocks in dir', 'int', self.size_in_blocks,
-            description=('the number of blocks taken up by the directory '
-                'of this datfile'))
-        
-        self.add('unused','str','', num_elems=self.UNUSED1_LEN,
-            description='not sure why this was a good idea to include')
-
-        self.add('last updated', 'str', utils.gettime(),
-            num_elems=self.DATE_LEN, 
-            description='when was this file last edited?')
-
-        self.add('unused2', 'str', '', num_elems=self.UNUSED2_LEN,
-            description='not sure why this was a good idea to include')
-
-        self.add('DSETS','rg', num_elems='num datasets',
-            descriptions='entries describing what datasets are in the datfile')
-
-        # prepare for adding datasets
-        self['DSETS'].add('schname', 'str', num_elems=self.SCHNAM_LEN,
-                        description='name of the scheme of this dataset')
-        self['DSETS'].add('size','int',
-                        description='dataset size in blocks')
-        self['DSETS'].add('id','str', num_elems=self.DSID_LEN, 
-                        description='dataset/experiment id. mus be unique')
-        self['DSETS'].add('start','int',
-                        description='block number where dataset starts')
-        self['DSETS'].add('exp','str',  num_elems=self.EXP_LEN, 
-                        description='experiment type. e.g. Populin uses COM')
-
-        self.calc_size()
-
-    def add_dataset(self, comp_dset):
-        ''' adds a dataset entry to the directory 
-            & saves the dataset to self.datasets
-            comp_dset must be an instance of a full dataset
-        '''
-        assert (isinstance(comp_dset, dataset) 
-            and not isinstance(comp_dset, datfile)), (
-            'add dataset requires an initialized dataset not %s'%comp_dset) 
-
-        dsets = self['DSETS']
-        dsets.add_group()
-        lastdset = dsets[-1] 
-
-        lastdset['schname'].set(comp_dset['SCHNAM'])
-        lastdset['size'].set(comp_dset['size'])
-        
-        dsetid = comp_dset['DSID']
-        # check conflict in current self.datasets
-        # if there's a conflict in the dsetid, 
-        # overwrite the dataset id 
-        if self.dsid_conflict(dsetid): 
-            dsetid=len(self.datasets)
-            comp_dset['DSID'].set(str(dsetid))
-        lastdset['id'].set(str(dsetid))
-
-        # add this to self.datasets. needed for calc_startblock  
-        self.datasets.append(comp_dset)
-        
-        # looks for start loc for last dset in self.datatsets
-        loc = self.calc_startblock() 
-        lastdset['start'].set(loc)
-
-        lastdset['exp'].set(comp_dset['EXPTYP'])
-
-        self.calc_size()
-
-    def write(self, fp=None):
-        ''' write sthe contents of this datfile to a file'''
-        raise NotImplementedError('writes not done')
-
-    def calc_startblock(self, index=-1):
-        ''' this calculates the block where the indicated data starts
-            if the index is -1 will find the start of the last block 
-        '''
-        indicated_datasets = self.datasets[0:index] 
-        
-        blocks = self.size_in_blocks()
-        for dset in indicated_datasets:
-            blocks += dset.size_in_blocks()
-        return blocks + 1 # go to the next one. 
 
 
 class dataset(datumlist):
@@ -251,6 +117,151 @@ class dataset(datumlist):
         if len(lst) > 0:
             assert isinstance(lst[0], typ), 'not of type %s instead %s'%(typ, lst[0])
 
+class datfile(dataset):
+    '''
+        this object represents  an entire datfile
+        which is composed of a file header and a number of datasets
+        how you make a datfile is initialize this object
+        then create your datasets for the file using their respective
+        populate functions. 
+        then call the self.add_dataset of your datfile. 
+
+    '''
+    # directories have 2 uused sections
+    UNUSED1_LEN = 2  # 4 chars
+    UNUSED2_LEN = 16 # 32 chars
+
+    def __init__(self, animalid = 'defaultid', openexisting=False):
+        '''initialize jthe datfile directory with empty list of 
+            datasets
+
+            include openexising if you want to load an existing 
+            file
+
+            the diretory includes 
+            animal id str - 12 char
+            number of datasets- int 
+            number of blocks in directory - int
+            unused - str
+            last updated - str
+            unused - str
+            dataset header - rg
+                name -str
+                size - int
+                id - int
+                start - int
+                exp - str
+
+        '''
+        datumlist.__init__(self) # do the super to set this up
+    
+        # we aren't supporting this yet.
+        if openexisting: 
+            raise NotImplementedError('open exising not implemented') 
+            return # don't do anything else after it's been loaded
+
+        # if it hasn't been loaded in. include all the neccessary stuff
+        self.datasets = [] # makes this an actual datumlist
+                
+        self.add('SubjectID', 'str',str(animalid), num_elems=self.ANID_LEN,
+            description='name of the subject')
+
+        # this gets updated by dataset headers
+        self.add('num datasets', 'int', 0, 
+            description='numer of datasets in this datafile')
+
+        self.add('blocks in dir', 'int', self.size_in_blocks,
+            description=('the number of blocks taken up by the directory '
+                'of this datfile'))
+        
+        self.add('unused','str','', num_elems=self.UNUSED1_LEN,
+            description='not sure why this was a good idea to include')
+
+        self.add('last updated', 'str', utils.gettime(),
+            num_elems=self.DATE_LEN, 
+            description='when was this file last edited?')
+
+        self.add('unused2', 'str', '', num_elems=self.UNUSED2_LEN,
+            description='not sure why this was a good idea to include')
+
+        self.add('DSETS','rg', num_elems='num datasets',
+            description='entries describing what datasets are in the datfile')
+
+        # prepare for adding datasets
+        self['DSETS'].add('schname', 'str', num_elems=self.SCHNAM_LEN,
+                        description='name of the scheme of this dataset')
+        self['DSETS'].add('size','int',
+                        description='dataset size in blocks')
+        self['DSETS'].add('id','str', num_elems=self.DSID_LEN, 
+                        description='dataset/experiment id. mus be unique')
+        self['DSETS'].add('start','int',
+                        description='block number where dataset starts')
+        self['DSETS'].add('exp','str',  num_elems=self.EXP_LEN, 
+                        description='experiment type. e.g. Populin uses COM')
+
+        self.calc_size()
+
+    def add_dataset(self, comp_dset):
+        ''' adds a dataset entry to the directory 
+            & saves the dataset to self.datasets
+            comp_dset must be an instance of a full dataset
+        '''
+        assert (isinstance(comp_dset, dataset) 
+            and not isinstance(comp_dset, datfile)), (
+            'add dataset requires an initialized dataset not %s'%comp_dset) 
+
+        # ipdb.set_trace()
+        dsets = self['DSETS']
+        dsets.add_group()
+        lastdset = dsets[-1] 
+
+        lastdset['schname'].set(comp_dset['SCHNAM'].value)
+        lastdset['size'].set(comp_dset['RECLNT'].value)
+        
+        dsetid = comp_dset['DSID'].value
+        # check conflict in current self.datasets
+        # if there's a conflict in the dsetid, 
+        # overwrite the dataset id 
+        if self.dsid_conflict(dsetid): 
+            datflog.warn(('conflict detected for id %s changing'
+                ' name of this istance to %s')%(dsetid, len(self.datasets)))
+            dsetid=len(self.datasets)
+            comp_dset['DSID'].set(str(dsetid))
+        lastdset['id'].set(str(dsetid))
+
+        # add this to self.datasets. needed for calc_startblock  
+        self.datasets.append(comp_dset)
+        
+        # looks for start loc for last dset in self.datatsets
+        loc = self.calc_startblock() 
+        lastdset['start'].set(loc)
+
+        lastdset['exp'].set(comp_dset['EXTYP'].value)
+
+        self.calc_size()
+
+    def write(self, fp=None):
+        ''' write sthe contents of this datfile to a file'''
+        raise NotImplementedError('writes not done')
+
+    def calc_startblock(self, index=-1):
+        ''' this calculates the block where the indicated data starts
+            if the index is -1 will find the start of the last block 
+        '''
+        indicated_datasets = self.datasets[0:index] 
+        
+        blocks = self.size_in_blocks()
+        for dset in indicated_datasets:
+            blocks += dset.size_in_blocks()
+        return blocks + 1 # go to the next one. 
+
+    def dsid_conflict(self,dsid):
+        ''' look through self.dtasets and compare the existing dsid's to 
+            the provided one. if conflict return TRUE else FALSE
+        '''
+        for ds in self.datasets:
+            if ds['DSID'] == dsid: return True
+        return False
 
 
 class sho18(dataset):
@@ -1100,10 +1111,10 @@ class sho18(dataset):
                         ]   ''')
 
 
-
-
-
-
+############################################################
+############################################################
+############################################################
+############################################################
 
 class unittests():
     ''' this class is full of testing code. 
@@ -1113,8 +1124,9 @@ class unittests():
         dsetlog.warn('\n\n\n###RUNNING DATFILE UNIT TESTS')
         # IPython.embed(local_ns = locals())
         # self.testrepgroupsofrepgroupsofvecs()
-        self.testsho18forpythonicdisplay()
+        # self.testsho18forpythonicdisplay()
         # self.testcalcsize()
+        self.testdatfile()
         dsetlog.warn('\n\n\n###DATFILE UNIT TESTS PASSED!!!')
     
     def testrepgroupsofrepgroupsofvecs(self):
@@ -1333,6 +1345,19 @@ class unittests():
         
         lenofstuff.set(lenofstuff.eval())
         dsetlog.warn('%s'%ds)
-
+    def testdatfile(self):
+        dsetlog.warn('\n\n\n###CREATING datfile for pythonic display')
+        dat = datfile(animalid='russell')
+        for i in range(10):
+            dset = dataset( SCHNAM= str(i) + 'xxxxxx',
+                        ANID= str(i) + 'xxxxxx',
+                        DSID= str(i) + 'xxxxxx',
+                        DATE= str(i) + 'xxxxxx',
+                        TIME= ' 1000',
+                        EXTYP= str(i) + 'xxxxxx') 
+            dat.add_dataset(dset)
+        dsetlog.warn('BUILT DATFILE VVVVVVVVVVVVVVVV')
+        dsetlog.warn(dat)
+        dsetlog.warn('\n\n\n###DONE datfile for pythonic display')
         
 unittests()

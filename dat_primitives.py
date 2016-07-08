@@ -113,6 +113,9 @@ class dat_type(object):
 	def __add__(self, other): 
 		''' does other + self.value '''
 		return other + self.value 
+	def __len__(self): 
+		''' returns the length of this value. only for lists'''
+		return len(self.value)
 class dat_number(dat_type):
 	''' included to give all number dats a common parent, 
 		that excludes str and lists'''
