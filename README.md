@@ -1,5 +1,10 @@
 Developer Notes
 ================
+Summary from Junwei 
+------------
+
+
+
 
 Testing & development procedure
 --------------------------------
