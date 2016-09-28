@@ -30,7 +30,7 @@ one important one is to set a breakpoint within the script
 add the line ```import ipdb;ipdb.set_trace()``` which will pause the program, drop you into a terminal outfitted with gdb like commands i.e. n,c,w,l check out the notes [here](https://github.com/rrlittle/edfdat_learning_environment.git) for notes on ipdb. 
 
 
-Todo
+Todo (1, 2, 3, 4 are mostly finished. 5 needs to be done and need some predetermined format.)
 ----------
 1. implement Datfile class within datfile.py
     
