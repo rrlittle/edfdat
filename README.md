@@ -1,14 +1,5 @@
 Developer Notes
 ================
-Summary from Junwei 
--------------------------------
-These codes here are for converting .edf file from eyelink into .dat file. 
-The procedure is: 
-
-
-
-
-Testing & development procedure from Russell 
 --------------------------------
 
 there are four components to the entire package
