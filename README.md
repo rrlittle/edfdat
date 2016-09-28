@@ -1,5 +1,6 @@
 Developer Notes
 ================
+For some brief summary, please read this section and next "TO DO" section. The next "General EDFDAT explanation" section goes into details to explain every file and you can choose what you are interested in to read. 
 --------------------------------
 
 there are four components to the entire package
